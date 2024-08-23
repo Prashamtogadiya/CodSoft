@@ -94,27 +94,28 @@ class BankAccount {
  */
 public class ATM {
     private Map<String, BankAccount> accounts;
-    private String pin;
+    private Map<String, String> accountPins;
 
     /**
-     * Constructor to initialize the ATM with multiple bank accounts and a PIN.
+     * Constructor to initialize the ATM with multiple bank accounts and their associated PINs.
      * 
-     * @param accounts A map of account IDs to bank accounts.
-     * @param pin      The user's PIN.
+     * @param accounts    A map of account IDs to bank accounts.
+     * @param accountPins A map of account IDs to their corresponding PINs.
      */
-    public ATM(Map<String, BankAccount> accounts, String pin) {
+    public ATM(Map<String, BankAccount> accounts, Map<String, String> accountPins) {
         this.accounts = accounts;
-        this.pin = pin;
+        this.accountPins = accountPins;
     }
 
     /**
-     * Verifies if the entered PIN is correct.
+     * Verifies if the entered PIN is correct for the given account ID.
      * 
-     * @param inputPin The PIN entered by the user.
+     * @param accountId The account ID.
+     * @param inputPin  The PIN entered by the user.
      * @return True if the PIN is correct, otherwise false.
      */
-    public boolean verifyPin(String inputPin) {
-        return this.pin.equals(inputPin);
+    public boolean verifyPin(String accountId, String inputPin) {
+        return accountPins.containsKey(accountId) && accountPins.get(accountId).equals(inputPin);
     }
 
     /**
@@ -172,22 +173,28 @@ public class ATM {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         
-        // Initialize multiple accounts
+        // Initialize multiple accounts with their respective balances
         Map<String, BankAccount> accounts = new HashMap<>();
         accounts.put("123", new BankAccount(500.0)); // Account 1 with $500 balance
         accounts.put("456", new BankAccount(1000.0)); // Account 2 with $1000 balance
+
+        // Initialize account PINs
+        Map<String, String> accountPins = new HashMap<>();
+        accountPins.put("123", "1234"); // PIN for account 1
+        accountPins.put("456", "4567"); // PIN for account 2
         
-        ATM atm = new ATM(accounts, "1234"); // Initialize ATM with accounts and PIN
+        ATM atm = new ATM(accounts, accountPins); // Initialize ATM with accounts and their PINs
 
-        System.out.print("Enter your PIN: ");
-        String enteredPin = scanner.nextLine();
+        System.out.print("Enter your account ID: ");
+        String accountId = scanner.nextLine();
 
-        if (atm.verifyPin(enteredPin)) {
-            System.out.print("Enter your account ID: ");
-            String accountId = scanner.nextLine();
-            BankAccount selectedAccount = atm.selectAccount(accountId);
+        BankAccount selectedAccount = atm.selectAccount(accountId);
 
-            if (selectedAccount != null) {
+        if (selectedAccount != null) {
+            System.out.print("Enter your PIN: ");
+            String enteredPin = scanner.nextLine();
+
+            if (atm.verifyPin(accountId, enteredPin)) {
                 boolean exit = false;
 
                 while (!exit) {
@@ -233,10 +240,10 @@ public class ATM {
                     }
                 }
             } else {
-                System.out.println("Invalid account ID.");
+                System.out.println("Incorrect PIN. Access denied.");
             }
         } else {
-            System.out.println("Incorrect PIN. Access denied.");
+            System.out.println("Invalid account ID.");
         }
 
         scanner.close();
