@@ -1,3 +1,7 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -5,6 +9,9 @@ import java.util.Scanner;
  */
 class BankAccount {
     private double balance;
+    private List<String> transactionHistory;
+    private double dailyLimit = 1000.0;
+    private double dailyWithdrawn = 0;
 
     /**
      * Constructor to initialize the bank account with a given balance.
@@ -13,6 +20,7 @@ class BankAccount {
      */
     public BankAccount(double initialBalance) {
         this.balance = initialBalance;
+        this.transactionHistory = new ArrayList<>();
     }
 
     /**
@@ -23,6 +31,7 @@ class BankAccount {
     public void deposit(double amount) {
         if (amount > 0) {
             balance += amount;
+            transactionHistory.add("Deposited: $" + amount);
             System.out.println("Deposit successful. Current balance: $" + balance);
         } else {
             System.out.println("Invalid deposit amount.");
@@ -30,14 +39,20 @@ class BankAccount {
     }
 
     /**
-     * Withdraws a specified amount from the account if sufficient balance is available.
+     * Withdraws a specified amount from the account if sufficient balance is available and daily limit is not exceeded.
      * 
      * @param amount The amount to withdraw.
      */
     public void withdraw(double amount) {
         if (amount > 0 && amount <= balance) {
-            balance -= amount;
-            System.out.println("Withdrawal successful. Current balance: $" + balance);
+            if (dailyWithdrawn + amount > dailyLimit) {
+                System.out.println("Exceeded daily withdrawal limit.");
+            } else {
+                balance -= amount;
+                dailyWithdrawn += amount;
+                transactionHistory.add("Withdrew: $" + amount);
+                System.out.println("Withdrawal successful. Current balance: $" + balance);
+            }
         } else if (amount > balance) {
             System.out.println("Insufficient balance.");
         } else {
@@ -53,46 +68,100 @@ class BankAccount {
     public double getBalance() {
         return balance;
     }
+
+    /**
+     * Returns the transaction history of the account.
+     * 
+     * @return The list of transactions.
+     */
+    public List<String> getTransactionHistory() {
+        return transactionHistory;
+    }
+
+    /**
+     * Converts the current balance to another currency based on the provided exchange rate.
+     * 
+     * @param exchangeRate The exchange rate for conversion.
+     * @return The converted balance.
+     */
+    public double convertToCurrency(double exchangeRate) {
+        return balance * exchangeRate;
+    }
 }
 
 /**
  * Represents an ATM machine.
  */
 public class ATM {
-    private BankAccount account;
+    private Map<String, BankAccount> accounts;
+    private String pin;
 
     /**
-     * Constructor to initialize the ATM with a user's bank account.
+     * Constructor to initialize the ATM with multiple bank accounts and a PIN.
      * 
-     * @param account The user's bank account.
+     * @param accounts A map of account IDs to bank accounts.
+     * @param pin      The user's PIN.
      */
-    public ATM(BankAccount account) {
-        this.account = account;
+    public ATM(Map<String, BankAccount> accounts, String pin) {
+        this.accounts = accounts;
+        this.pin = pin;
     }
 
     /**
-     * Allows the user to withdraw a specified amount from their account.
+     * Verifies if the entered PIN is correct.
      * 
-     * @param amount The amount to withdraw.
+     * @param inputPin The PIN entered by the user.
+     * @return True if the PIN is correct, otherwise false.
      */
-    public void withdraw(double amount) {
-        account.withdraw(amount);
+    public boolean verifyPin(String inputPin) {
+        return this.pin.equals(inputPin);
     }
 
     /**
-     * Allows the user to deposit a specified amount into their account.
+     * Allows the user to select an account by its ID.
      * 
-     * @param amount The amount to deposit.
+     * @param accountId The ID of the account to select.
+     * @return The selected bank account, or null if the account ID is invalid.
      */
-    public void deposit(double amount) {
-        account.deposit(amount);
+    public BankAccount selectAccount(String accountId) {
+        return accounts.get(accountId);
     }
 
     /**
      * Displays the current balance in the user's account.
+     * 
+     * @param account The user's bank account.
      */
-    public void checkBalance() {
+    public void checkBalance(BankAccount account) {
         System.out.println("Your current balance is: $" + account.getBalance());
+    }
+
+    /**
+     * Displays the transaction history of the user's account.
+     * 
+     * @param account The user's bank account.
+     */
+    public void showTransactionHistory(BankAccount account) {
+        List<String> history = account.getTransactionHistory();
+        if (history.isEmpty()) {
+            System.out.println("No transactions found.");
+        } else {
+            System.out.println("Transaction History:");
+            for (String transaction : history) {
+                System.out.println(transaction);
+            }
+        }
+    }
+
+    /**
+     * Displays the balance converted to another currency.
+     * 
+     * @param account      The user's bank account.
+     * @param exchangeRate The exchange rate for conversion.
+     */
+    public void showConvertedBalance(BankAccount account, double exchangeRate) {
+        double convertedBalance = account.convertToCurrency(exchangeRate);
+        System.out.println("Your balance in the selected currency: $" + convertedBalance);
     }
 
     /**
@@ -102,42 +171,72 @@ public class ATM {
      */
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        BankAccount userAccount = new BankAccount(500.0); // Initialize with $500 balance
-        ATM atm = new ATM(userAccount);
+        
+        // Initialize multiple accounts
+        Map<String, BankAccount> accounts = new HashMap<>();
+        accounts.put("123", new BankAccount(500.0)); // Account 1 with $500 balance
+        accounts.put("456", new BankAccount(1000.0)); // Account 2 with $1000 balance
+        
+        ATM atm = new ATM(accounts, "1234"); // Initialize ATM with accounts and PIN
 
-        boolean exit = false;
+        System.out.print("Enter your PIN: ");
+        String enteredPin = scanner.nextLine();
 
-        while (!exit) {
-            System.out.println("\nATM Menu:");
-            System.out.println("1. Check Balance");
-            System.out.println("2. Deposit");
-            System.out.println("3. Withdraw");
-            System.out.println("4. Exit");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
+        if (atm.verifyPin(enteredPin)) {
+            System.out.print("Enter your account ID: ");
+            String accountId = scanner.nextLine();
+            BankAccount selectedAccount = atm.selectAccount(accountId);
 
-            switch (choice) {
-                case 1:
-                    atm.checkBalance();
-                    break;
-                case 2:
-                    System.out.print("Enter amount to deposit: $");
-                    double depositAmount = scanner.nextDouble();
-                    atm.deposit(depositAmount);
-                    break;
-                case 3:
-                    System.out.print("Enter amount to withdraw: $");
-                    double withdrawAmount = scanner.nextDouble();
-                    atm.withdraw(withdrawAmount);
-                    break;
-                case 4:
-                    exit = true;
-                    System.out.println("Exiting ATM. Thank you for using our service!");
-                    break;
-                default:
-                    System.out.println("Invalid option. Please try again.");
-                    break;
+            if (selectedAccount != null) {
+                boolean exit = false;
+
+                while (!exit) {
+                    System.out.println("\nATM Menu:");
+                    System.out.println("1. Check Balance");
+                    System.out.println("2. Deposit");
+                    System.out.println("3. Withdraw");
+                    System.out.println("4. View Transaction History");
+                    System.out.println("5. Convert Balance to Another Currency");
+                    System.out.println("6. Exit");
+                    System.out.print("Choose an option: ");
+                    int choice = scanner.nextInt();
+
+                    switch (choice) {
+                        case 1:
+                            atm.checkBalance(selectedAccount);
+                            break;
+                        case 2:
+                            System.out.print("Enter amount to deposit: $");
+                            double depositAmount = scanner.nextDouble();
+                            selectedAccount.deposit(depositAmount);
+                            break;
+                        case 3:
+                            System.out.print("Enter amount to withdraw: $");
+                            double withdrawAmount = scanner.nextDouble();
+                            selectedAccount.withdraw(withdrawAmount);
+                            break;
+                        case 4:
+                            atm.showTransactionHistory(selectedAccount);
+                            break;
+                        case 5:
+                            System.out.print("Enter the exchange rate: ");
+                            double exchangeRate = scanner.nextDouble();
+                            atm.showConvertedBalance(selectedAccount, exchangeRate);
+                            break;
+                        case 6:
+                            exit = true;
+                            System.out.println("Exiting ATM. Thank you for using our service!");
+                            break;
+                        default:
+                            System.out.println("Invalid option. Please try again.");
+                            break;
+                    }
+                }
+            } else {
+                System.out.println("Invalid account ID.");
             }
+        } else {
+            System.out.println("Incorrect PIN. Access denied.");
         }
 
         scanner.close();
